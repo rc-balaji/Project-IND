@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'food_page.dart';  // Import the FoodPage class
 
 class SaltPage extends StatefulWidget {
+  final String username;
+
+  SaltPage({required this.username});
+
   @override
   _SaltPageState createState() => _SaltPageState();
 }
@@ -113,32 +119,46 @@ class _SaltPageState extends State<SaltPage> {
     );
   }
 
-  void _submit() {
-    // Implement your submission logic here
-    print('Amount of salt added: ${_saltController.text} grams');
-    print('Dry fish: ${_dryFishController.text} grams');
-    print('Papadam count: $_papadamCount');
-    print('Pickles: ${_picklesController.text} grams');
-    print('Salted nuts: ${_saltedNutsController.text} grams');
-    print('Preserved foods: ${_preservedFoodsController.text}');
-    print('Salted butter: ${_saltedButterController.text} glass');
-    print('Cheese: ${_cheeseController.text} grams');
+  void _submit() async {
+    List<Map<String, dynamic>> saltData = [
+      {'name': 'Amount of salt added', 'value': _saltController.text},
+      {'name': 'Dry fish', 'value': _dryFishController.text},
+      {'name': 'Papadam count', 'value': _papadamCount.toString()},
+      {'name': 'Pickles', 'value': _picklesController.text},
+      {'name': 'Salted nuts', 'value': _saltedNutsController.text},
+      {'name': 'Preserved foods', 'value': _preservedFoodsController.text},
+      {'name': 'Salted butter', 'value': _saltedButterController.text},
+      {'name': 'Cheese', 'value': _cheeseController.text},
+    ];
 
-    // You can add further logic here, such as saving to a database or navigating to another page after saving.
-
-    // For demonstration, just show a Snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Submitted successfully!'),
-      ),
+    final response = await http.put(
+      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/foods/Salt'), // Replace with your API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({'food': {'Salt': saltData}}),
     );
 
-    // Navigate back to FoodPage
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => FoodPage()),
-          (Route<dynamic> route) => false,
-    );
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Submitted successfully!'),
+        ),
+      );
+
+      // Navigate back to FoodPage
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => FoodPage(username: widget.username)),
+        (Route<dynamic> route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit!'),
+        ),
+      );
+    }
   }
 }
 

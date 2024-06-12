@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class VegetablesPage extends StatefulWidget {
+  final String username;
+
+  VegetablesPage({required this.username});
+
   @override
   _VegetablesPageState createState() => _VegetablesPageState();
 }
@@ -38,7 +44,9 @@ class _VegetablesPageState extends State<VegetablesPage> {
                         icon: Icon(Icons.remove),
                         onPressed: () {
                           setState(() {
-                            vegetables[index].count--;
+                            if (vegetables[index].count > 0) {
+                              vegetables[index].count--;
+                            }
                           });
                         },
                       ),
@@ -111,9 +119,33 @@ class _VegetablesPageState extends State<VegetablesPage> {
     );
   }
 
-  void _submit(BuildContext context) {
-    // Logic to submit data
-    Navigator.pop(context); // Navigate back to food_page.dart
+  void _submit(BuildContext context) async {
+    List<Map<String, dynamic>> vegetableData = vegetables.map((vegetable) {
+      return {'name': vegetable.name, 'count': vegetable.count};
+    }).toList();
+
+    final response = await http.put(
+      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/foods/Vegetables'), // Replace with your actual API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({'food': {'Vegetables': vegetableData}}),
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Submitted successfully!'),
+        ),
+      );
+      Navigator.pop(context); // Navigate back to the previous page
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit!'),
+        ),
+      );
+    }
   }
 }
 

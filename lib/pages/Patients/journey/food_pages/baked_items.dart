@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class BakedItemsPage extends StatefulWidget {
+  final String username;
+
+  BakedItemsPage({required this.username});
+
   @override
   _BakedItemsPageState createState() => _BakedItemsPageState();
 }
@@ -114,10 +120,23 @@ class _BakedItemsPageState extends State<BakedItemsPage> {
     );
   }
 
-  void _submit(BuildContext context) {
-    // Logic to submit data
-    Navigator.pop(context); // Navigate back to previous page
+  void _submit(BuildContext context) async {
+  List<Map<String, dynamic>> bakedItems = [];
+
+  for (var item in items) {
+    bakedItems.add({'name': item.name, 'quantity': item.count});
   }
+
+  final response = await http.put(
+    Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/foods/Baked_Items'), // Replace with your API endpoint
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: jsonEncode({'food': {'Baked_Items': bakedItems}}), // Pass bakedItems in the correct format
+  );
+  Navigator.pop(context);
+}
+
 }
 
 class ItemData {
@@ -125,10 +144,4 @@ class ItemData {
   int count;
 
   ItemData({required this.name, required this.count});
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: BakedItemsPage(),
-  ));
 }

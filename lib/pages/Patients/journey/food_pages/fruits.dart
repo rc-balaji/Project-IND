@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class FruitsPage extends StatefulWidget {
+  final String username;
+
+  FruitsPage({required this.username});
+
   @override
   _FruitsPageState createState() => _FruitsPageState();
 }
@@ -50,7 +56,9 @@ class _FruitsPageState extends State<FruitsPage> {
                         icon: Icon(Icons.remove),
                         onPressed: () {
                           setState(() {
-                            fruits[index].count--;
+                            if (fruits[index].count > 0) {
+                              fruits[index].count--;
+                            }
                           });
                         },
                       ),
@@ -138,9 +146,37 @@ class _FruitsPageState extends State<FruitsPage> {
     );
   }
 
-  void _submit(BuildContext context) {
-    // Logic to submit data
-    Navigator.pop(context); // Navigate back to food_page.dart
+  void _submit(BuildContext context) async {
+    List<Map<String, dynamic>> fruitsData = [];
+
+    for (var fruit in fruits) {
+      fruitsData.add({'name': fruit.name, 'quantity': fruit.count});
+    }
+
+    final response = await http.put(
+      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/foods/Fruits'), // Replace with your API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({'food': {'Fruits': fruitsData}}), // Pass fruits in the correct format
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Submitted successfully!'),
+        ),
+      );
+
+      // Navigate back to FoodPage
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit!'),
+        ),
+      );
+    }
   }
 }
 
@@ -150,3 +186,4 @@ class FruitData {
 
   FruitData({required this.name, required this.count});
 }
+

@@ -169,7 +169,7 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } else {
       final response = await http.post(
-        Uri.parse('http://192.168.1.10:3000/api/signup/new'),
+        Uri.parse('http://192.168.197.83:3000/api/signup/new'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

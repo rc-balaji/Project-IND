@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'food_pages/food_page.dart';
 import 'excersise_page/exercise_habits.dart';
 import 'smoke_page/smoking_page.dart';
@@ -51,29 +52,47 @@ class _JourneyPageState extends State<JourneyPage> {
   }
 
   void _loadCompletionStatus() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final response = await http.get(
+      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/journey-status'),
+    );
+
+    if (response.statusCode == 200) {
+  final data = json.decode(response.body);
+  if (data is Map<String, dynamic>) {
     setState(() {
-      completionStatus['food'] = prefs.getBool('food') ?? false;
-      completionStatus['exercise'] = prefs.getBool('exercise') ?? false;
-      if (widget.smoke) {
-        completionStatus['smoking'] = prefs.getBool('smoking') ?? false;
-      }
-      if (widget.alcohol) {
-        completionStatus['alcohol'] = prefs.getBool('alcohol') ?? false;
-      }
-      completionStatus['sleep'] = prefs.getBool('sleep') ?? false;
-      completionStatus['water'] = prefs.getBool('water') ?? false;
+      completionPercentage = data['status_percentage'] ?? 0;
       _updateCompletionPercentage();
     });
+  } else {
+    print('Data is not in the expected format');
+  }
+} else {
+  print('Failed to load completion status: ${response.statusCode}');
+}
+
   }
 
   void _updateCompletionStatus(String key, bool value) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      completionStatus[key] = value;
-      prefs.setBool(key, value);
-      _updateCompletionPercentage();
-    });
+    final url = 'http://192.168.197.83:3000/api/patients/${widget.username}/journey-status';
+    print('Updating completion status: $url');
+
+    final response = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, dynamic>{ 'key': key, 'value': value }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Completion status updated successfully for $key');
+      setState(() {
+        completionStatus[key] = value;
+        _updateCompletionPercentage();
+      });
+    } else {
+      print('Failed to update completion status for $key: ${response.statusCode}');
+    }
   }
 
   void _updateCompletionPercentage() {
@@ -82,6 +101,29 @@ class _JourneyPageState extends State<JourneyPage> {
     setState(() {
       completionPercentage = (completed / totalTasks);
     });
+    _updateJourneyPercentage();
+  }
+
+  void _updateJourneyPercentage() async {
+    final url = 'http://192.168.197.83:3000/api/patients/${widget.username}/journey-status';
+    print('Updating journey percentage: $url');
+
+    final response = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'key': 'status_percentage',
+        'value': completionPercentage * 100,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Journey percentage updated successfully');
+    } else {
+      print('Failed to update journey percentage: ${response.statusCode}');
+    }
   }
 
   void _resetProgressAtMidnight() {
@@ -91,9 +133,6 @@ class _JourneyPageState extends State<JourneyPage> {
     Timer(timeToMidnight, () {
       setState(() {
         completionStatus.updateAll((key, value) => false);
-        SharedPreferences.getInstance().then((prefs) {
-          prefs.clear();
-        });
         _updateCompletionPercentage();
       });
       _resetProgressAtMidnight();
@@ -124,7 +163,7 @@ class _JourneyPageState extends State<JourneyPage> {
               text: 'Food',
               imagePath: 'images/food.jpg',
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => FoodPage())).then((_) {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => FoodPage(username : widget.username))).then((_) {
                   _updateCompletionStatus('food', true);
                 });
               },
@@ -160,7 +199,7 @@ class _JourneyPageState extends State<JourneyPage> {
                 imagePath: 'images/alcohol.jpg',
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => AlcoholismPage())).then((_) {
-                    _updateCompletionStatus('alcohol', true);
+                    _updateCompletionStatus('al                cohol', true);
                   });
                 },
                 screenSize: screenSize,
@@ -213,50 +252,49 @@ class _JourneyPageState extends State<JourneyPage> {
     required Size screenSize,
   }) {
     return ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
         foregroundColor: Colors.white,
         backgroundColor: Colors.blue.shade900,
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(screenSize.width * 0.05), // Adjust border radius based on screen width
-    ),
-    minimumSize:
-    Size(double.infinity, screenSize.height * 0.08), // Adjust button height based on screen height
+          borderRadius: BorderRadius.circular(screenSize.width * 0.03),
         ),
-      child: Container(
-        height: screenSize.height * 0.08, // Adjust button height based on screen height
-        padding: EdgeInsets.symmetric(horizontal: screenSize.width * 0.04), // Adjust horizontal padding based on screen width
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              flex: 1,
-              child: Container(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  text,
-                  style: TextStyle(fontSize: 18),
+      ),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: Colors.blue.shade900,
+          borderRadius: BorderRadius.circular(screenSize.width * 0.03),
+          image: DecorationImage(
+            image: AssetImage(imagePath),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withOpacity(0.5),
+              BlendMode.darken,
+            ),
+          ),
+        ),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            vertical: screenSize.height * 0.03,
+            horizontal: screenSize.width * 0.05,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: screenSize.width * 0.06, // Adjust font size based on screen width
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(screenSize.width * 0.05), // Adjust border radius based on screen width
-                    bottomRight: Radius.circular(screenSize.width * 0.05), // Adjust border radius based on screen width
-                  ),
-                  image: DecorationImage(
-                    image: AssetImage(imagePath),
-                    fit: BoxFit.cover,
-                    alignment: Alignment.centerRight,
-                  ),
-                ),
+              Icon(
+                Icons.arrow_forward,
+                size: screenSize.width * 0.06, // Adjust icon size based on screen width
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -264,24 +302,44 @@ class _JourneyPageState extends State<JourneyPage> {
 
   Widget _buildProgressCircle(Size screenSize) {
     return Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            height: screenSize.width * 0.4, // Adjust circle size based on screen width
-            width: screenSize.width * 0.4, // Adjust circle size based on screen width
-            child: CircularProgressIndicator(
-              value: completionPercentage,
-              strokeWidth: screenSize.width * 0.05, // Adjust stroke width based on screen width
-              backgroundColor: Colors.grey.shade300,
-              valueColor: AlwaysStoppedAnimation(Colors.blue),
+      child: Container(
+        width: screenSize.width * 0.4, // Adjust circle size based on screen width
+        height: screenSize.width * 0.4, // Adjust circle size based on screen width
+        child: Stack(
+          children: [
+            Center(
+              child: Container(
+                width: screenSize.width * 0.35, // Adjust inner circle size based on screen width
+                height: screenSize.width * 0.35, // Adjust inner circle size based on screen width
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[200],
+                ),
+                child: Center(
+                  child: Text(
+                    '${(completionPercentage * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: screenSize.width * 0.08, // Adjust font size based on screen width
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-          Text(
-            '${(completionPercentage * 100).toInt()}%',
-            style: TextStyle(fontSize: screenSize.width * 0.1, fontWeight: FontWeight.bold), // Adjust font size based on screen width
-          ),
-        ],
+            Center(
+              child: Container(
+                width: screenSize.width * 0.4, // Adjust progress circle size based on screen width
+                height: screenSize.width * 0.4, // Adjust progress circle size based on screen width
+                child: CircularProgressIndicator(
+                  value: completionPercentage,
+                  strokeWidth: screenSize.width * 0.04, // Adjust stroke width based on screen width
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

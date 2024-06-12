@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class NonVegPage extends StatefulWidget {
+  final String username;
+
+  NonVegPage({required this.username});
+
   @override
   _NonVegPageState createState() => _NonVegPageState();
 }
@@ -32,48 +38,48 @@ class _NonVegPageState extends State<NonVegPage> {
                   title: Text(nonVegItems[index].name),
                   trailing: nonVegItems[index].isByPiece
                       ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.remove),
-                        onPressed: () {
-                          setState(() {
-                            if (nonVegItems[index].count > 0) {
-                              nonVegItems[index].count--;
-                            }
-                          });
-                        },
-                      ),
-                      Text(nonVegItems[index].count.toString()),
-                      IconButton(
-                        icon: Icon(Icons.add),
-                        onPressed: () {
-                          setState(() {
-                            nonVegItems[index].count++;
-                          });
-                        },
-                      ),
-                    ],
-                  )
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed: () {
+                                setState(() {
+                                  if (nonVegItems[index].count > 0) {
+                                    nonVegItems[index].count--;
+                                  }
+                                });
+                              },
+                            ),
+                            Text(nonVegItems[index].count.toString()),
+                            IconButton(
+                              icon: Icon(Icons.add),
+                              onPressed: () {
+                                setState(() {
+                                  nonVegItems[index].count++;
+                                });
+                              },
+                            ),
+                          ],
+                        )
                       : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 60,
-                        child: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: 'grams',
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              nonVegItems[index].count = int.tryParse(value) ?? 0;
-                            });
-                          },
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 60,
+                              child: TextField(
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  hintText: 'grams',
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    nonVegItems[index].count = int.tryParse(value) ?? 0;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 );
               },
             ),
@@ -181,7 +187,7 @@ class _NonVegPageState extends State<NonVegPage> {
   void _addItem(String itemName, bool isByPiece) {
     setState(() {
       var item = nonVegItems.firstWhere(
-            (element) => element.name == itemName,
+        (element) => element.name == itemName,
         orElse: () => NonVegItem(name: itemName, count: 0, isByPiece: isByPiece),
       );
       if (!nonVegItems.contains(item)) {
@@ -227,9 +233,37 @@ class _NonVegPageState extends State<NonVegPage> {
     );
   }
 
-  void _submit(BuildContext context) {
-    // Implement your submit logic here.
-    Navigator.pop(context); // Navigate back to the previous page (food page)
+  void _submit(BuildContext context) async {
+    List<Map<String, dynamic>> nonVegData = [];
+
+    for (var item in nonVegItems) {
+      nonVegData.add({'name': item.name, 'quantity': item.count, 'isByPiece': item.isByPiece});
+    }
+
+    final response = await http.put(
+      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/foods/Non_Veg'), // Replace with your API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({'food': {'Non_Veg': nonVegData}}), // Pass non-veg items in the correct format
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Submitted successfully!'),
+        ),
+      );
+
+      // Navigate back to the previous page
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit!'),
+        ),
+      );
+    }
   }
 }
 
@@ -268,11 +302,11 @@ class NonVegButton extends StatelessWidget {
             ),
             child: imagePath != null
                 ? ClipOval(
-              child: Image.asset(
-                imagePath!,
-                fit: BoxFit.cover,
-              ),
-            )
+                    child: Image.asset(
+                      imagePath!,
+                      fit: BoxFit.cover,
+                    ),
+                  )
                 : Icon(Icons.add),
           ),
           SizedBox(height: 5),

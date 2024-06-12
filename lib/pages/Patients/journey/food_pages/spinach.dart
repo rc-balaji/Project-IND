@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SpinachPage extends StatefulWidget {
+  final String username;
+
+  SpinachPage({required this.username});
+
   @override
   _SpinachPageState createState() => _SpinachPageState();
 }
@@ -113,9 +119,33 @@ class _SpinachPageState extends State<SpinachPage> {
     );
   }
 
-  void _submit(BuildContext context) {
-    // Logic to submit data
-    Navigator.pop(context); // Navigate back to previous page
+  void _submit(BuildContext context) async {
+    List<Map<String, dynamic>> itemData = items.map((item) {
+      return {'name': item.name, 'count': item.count};
+    }).toList();
+
+    final response = await http.put(
+      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/foods/Spinach'), // Replace with your actual API endpoint
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({'food': {'Spinach': itemData}}),
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Submitted successfully!'),
+        ),
+      );
+      Navigator.pop(context); // Navigate back to the previous page
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit!'),
+        ),
+      );
+    }
   }
 }
 

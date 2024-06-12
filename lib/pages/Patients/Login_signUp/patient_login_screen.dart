@@ -142,7 +142,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
     String password = _passwordController.text;
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.10:3000/api/login'),
+      Uri.parse('http://192.168.197.83:3000/api/login'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },

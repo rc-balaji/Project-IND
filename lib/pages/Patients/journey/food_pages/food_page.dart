@@ -9,6 +9,10 @@ import 'baked_items.dart';
 import 'drinks.dart';
 
 class FoodPage extends StatelessWidget {
+
+  final String username;
+
+  FoodPage({required this.username});
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
@@ -42,7 +46,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => FruitsPage()),
+                    MaterialPageRoute(builder: (context) => FruitsPage(username: username)),
                   );
                 },
                 imagePath: 'images/fruit.jpg',
@@ -54,7 +58,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => VegetablesPage()),
+                    MaterialPageRoute(builder: (context) => VegetablesPage(username: username)),
                   );
                 },
                 imagePath: 'images/veg.jpg',
@@ -66,7 +70,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SproutsNutsPage()),
+                    MaterialPageRoute(builder: (context) => SproutsNutsPage(username: username)),
                   );
                 },
                 imagePath: 'images/sprouts.jpg',
@@ -78,7 +82,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SpinachPage()),
+                    MaterialPageRoute(builder: (context) => SpinachPage(username: username)),
                   );
                 },
                 imagePath: 'images/spinach.jpg',
@@ -90,7 +94,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => BakedItemsPage()),
+                    MaterialPageRoute(builder: (context) => BakedItemsPage(username: username)),
                   );
                 },
                 imagePath: 'images/baked.jpg',
@@ -102,7 +106,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => NonVegPage()),
+                    MaterialPageRoute(builder: (context) => NonVegPage(username: username)),
                   );
                 },
                 imagePath: 'images/nonveg.jpg',
@@ -114,7 +118,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SaltPage()),
+                    MaterialPageRoute(builder: (context) => SaltPage(username: username)),
                   );
                 },
                 imagePath: 'images/salt.jpg',
@@ -126,7 +130,7 @@ class FoodPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => DrinksPage()),
+                    MaterialPageRoute(builder: (context) => DrinksPage(username: username)),
                   );
                 },
                 imagePath: 'images/drinks.jpg',

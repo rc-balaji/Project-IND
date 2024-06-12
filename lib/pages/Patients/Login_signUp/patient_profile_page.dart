@@ -289,58 +289,59 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   }
 
   void _saveProfile() async {
-    String name = _nameController.text;
-    String age = _ageController.text;
-    String occupation = _occupationController.text;
-    String registeredDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
+  String name = _nameController.text;
+  String age = _ageController.text;
+  String occupation = _occupationController.text;
+  String registeredDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
 
-    final response = await http.put(
-      Uri.parse('http://192.168.1.10:3000/api/patients/${widget.username}'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'password': widget.password,
-        'name': name,
-        'age': age,
-        'gender': _selectedGender,
-        'maritalStatus': _selectedMaritalStatus,
-        'occupation': occupation,
-        'alcohol': _drinksAlcohol,
-        'smoke': _smokes,
-        'journey': {
-          'registered_Date': registeredDate
-        }
-      }),
+  final response = await http.put(
+    Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}'),
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: jsonEncode(<String, dynamic>{
+      'password': widget.password,
+      'name': name.isNotEmpty ? name : null,
+      'age': age.isNotEmpty ? int.parse(age) : null,
+      'gender': _selectedGender.isNotEmpty ? _selectedGender : null,
+      'maritalStatus': _selectedMaritalStatus.isNotEmpty ? _selectedMaritalStatus : null,
+      'occupation': occupation.isNotEmpty ? occupation : null,
+      'alcohol': _drinksAlcohol,
+      'smoke': _smokes,
+      'journey': {
+        'registered_Date': registeredDate
+      }
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PatientLoginScreen(),
+      ),
     );
-
-    if (response.statusCode == 200) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PatientLoginScreen(),
-        ),
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text('Error'),
-            content: Text('Failed to save profile.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
+  } else {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text('Failed to save profile.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
+}
+
 }
 
 class SliverFooter extends StatelessWidget {
