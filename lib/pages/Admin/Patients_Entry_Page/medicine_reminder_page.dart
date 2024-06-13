@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'medication.dart'; // Import MedicationList from medication.dart
 
 class Medicine extends StatelessWidget {
   // Define a global list to store medications
   static List<String> medications = [];
+   final String patientId;
+  Medicine({required this.patientId});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Medication Management',
-      home: MainDashboard(),
+      home: MainDashboard(patientId: patientId),
     );
   }
 }
@@ -17,6 +21,8 @@ class Medicine extends StatelessWidget {
 class MainDashboard extends StatefulWidget {
   @override
   _MainDashboardState createState() => _MainDashboardState();
+   final String patientId;
+  MainDashboard({required this.patientId});
 }
 
 class _MainDashboardState extends State<MainDashboard> {
@@ -39,7 +45,7 @@ class _MainDashboardState extends State<MainDashboard> {
       // Navigate to MedicationList
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => MedicationList()),
+        MaterialPageRoute(builder: (context) => MedicationList(patientId: widget.patientId)),
       );
     } else {
       // Show an alert dialog if the search query is empty

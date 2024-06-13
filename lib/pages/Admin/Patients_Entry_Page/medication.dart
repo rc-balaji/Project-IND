@@ -1,22 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:untitled2/pages/Admin/Patients_Entry_Page/medicine_reminder_page.dart';
 import '../../../home_page.dart';
-import 'medicine_reminder_page.dart';
 
 class MedicationList extends StatefulWidget {
   @override
   _MedicationListState createState() => _MedicationListState();
+  final String patientId;
+  MedicationList({required this.patientId});
 }
 
 class _MedicationListState extends State<MedicationList> {
   final Map<String, List<MedicationReminder>> medicationReminders = {};
 
+  Future<void> _sendMedicationReminders() async {
+    final url = Uri.parse('http://192.168.183.83:3000/api/add-medication-list');
+    final List<Map<String, dynamic>> medicationList = medicationReminders.entries.map((entry) {
+      return {
+        'name': entry.key,
+        'start_date': entry.value.first.date.toIso8601String(),
+        'end_date': entry.value.last.date.toIso8601String(),
+        'times': entry.value.map((reminder) => reminder.time.format(context)).toList(),
+      };
+    }).toList();
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'patient_id': widget.patientId,
+        'medication_list': medicationList,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Medication reminder list sent successfully');
+    } else {
+      print('Failed to send medication reminder list');
+    }
+  }
+
   void _addReminder(String medicationName) async {
     final reminders = await showDialog<List<MedicationReminder>>(
       context: context,
       builder: (BuildContext context) {
-        return DateTimePickerDialog();
+        return DateTimePickerDialog(medicationName: medicationName);
       },
     );
 
@@ -26,6 +57,7 @@ class _MedicationListState extends State<MedicationList> {
           medicationReminders[medicationName] = [];
         }
         medicationReminders[medicationName]!.addAll(reminders);
+        _sendMedicationReminders();
       });
     }
   }
@@ -88,6 +120,7 @@ class _MedicationListState extends State<MedicationList> {
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
               onPressed: () {
+                _sendMedicationReminders();
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => HomePage()),
@@ -236,8 +269,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       child: Center(
         child: Text(
           reminders.length.toString(),
-          style: TextStyle
-            (color: Colors.white, fontSize: 12),
+          style: TextStyle(color: Colors.white, fontSize: 12),
         ),
       ),
     );
@@ -257,6 +289,10 @@ class MedicationReminder {
 }
 
 class DateTimePickerDialog extends StatefulWidget {
+  final String medicationName;
+
+  DateTimePickerDialog({required this.medicationName});
+
   @override
   _DateTimePickerDialogState createState() => _DateTimePickerDialogState();
 }
@@ -383,7 +419,7 @@ class _DateTimePickerDialogState extends State<DateTimePickerDialog> {
                   MedicationReminder(
                     date: date,
                     time: time,
-                    medicationName: '', // Empty for now, should be set in the caller
+                    medicationName: widget.medicationName, // Set medication name here
                   ),
                 );
               }
@@ -396,4 +432,3 @@ class _DateTimePickerDialogState extends State<DateTimePickerDialog> {
     );
   }
 }
-

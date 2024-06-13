@@ -38,19 +38,28 @@ const recordSchema = new mongoose.Schema({
     nap_duration: String
   },
   water: {
-    status: Boolean,
     intake: Number
   },
   alcohol: {
-    isHave: Boolean,
-    consumed_alcohol_today: String,
-    glasses_consumed: Number
+    consumedAlcoholToday: String,
+    glassesConsumed: Number,
   },
   smoke: {
-    isHave: Boolean,
     consumed_smoke_today: String,
     cigarettes_consumed: Number
   }
+});
+
+const medicationReminderSchema = new mongoose.Schema({
+  date: { type: Date, required: true },
+  time: { type: String, required: true }
+});
+
+const medicationListSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  start_date: { type: Date, required: true },
+  end_date: { type: Date, required: true },
+  times: [{ type: String, required: true }]
 });
 
 const patientSchema = new mongoose.Schema({
@@ -76,15 +85,7 @@ const patientSchema = new mongoose.Schema({
     ldl_cholesterol: Number,
     hdl_cholesterol: Number,
     triglyceride: Number,
-    medication_list: [{
-      name: String,
-      start_date: String,
-      end_date: String,
-      times: [{
-        name: String,
-        time: String
-      }]
-    }]
+    medication_list: [medicationListSchema]
   }
 });
 

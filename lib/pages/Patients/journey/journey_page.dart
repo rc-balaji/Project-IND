@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'food_pages/food_page.dart';
 import 'excersise_page/exercise_habits.dart';
 import 'smoke_page/smoking_page.dart';
@@ -35,6 +35,7 @@ class JourneyPage extends StatefulWidget {
 class _JourneyPageState extends State<JourneyPage> {
   late Map<String, bool> completionStatus;
   double completionPercentage = 0.0;
+  Timer? resetTimer;
 
   @override
   void initState() {
@@ -47,93 +48,70 @@ class _JourneyPageState extends State<JourneyPage> {
       'sleep': false,
       'water': false,
     };
-    _loadCompletionStatus();
+    _loadCompletionData();
     _resetProgressAtMidnight();
   }
 
-  void _loadCompletionStatus() async {
-    final response = await http.get(
-      Uri.parse('http://192.168.197.83:3000/api/patients/${widget.username}/journey-status'),
-    );
+  @override
+  void dispose() {
+    resetTimer?.cancel();
+    super.dispose();
+  }
 
-    if (response.statusCode == 200) {
-  final data = json.decode(response.body);
-  if (data is Map<String, dynamic>) {
+  void _loadCompletionData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      completionPercentage = data['status_percentage'] ?? 0;
-      _updateCompletionPercentage();
+      completionPercentage = (prefs.getDouble('completionPercentage') ?? 0.0);
+      completionStatus = {
+        'food': (prefs.getBool('foodCompleted') ?? false),
+        'exercise': (prefs.getBool('exerciseCompleted') ?? false),
+        'smoking': (prefs.getBool('smokingCompleted') ?? false),
+        'alcohol': (prefs.getBool('alcoholCompleted') ?? false),
+        'sleep': (prefs.getBool('sleepCompleted') ?? false),
+        'water': (prefs.getBool('waterCompleted') ?? false),
+      };
     });
-  } else {
-    print('Data is not in the expected format');
-  }
-} else {
-  print('Failed to load completion status: ${response.statusCode}');
-}
-
   }
 
-  void _updateCompletionStatus(String key, bool value) async {
-    final url = 'http://192.168.197.83:3000/api/patients/${widget.username}/journey-status';
-    print('Updating completion status: $url');
-
-    final response = await http.put(
-      Uri.parse(url),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{ 'key': key, 'value': value }),
-    );
-
-    if (response.statusCode == 200) {
-      print('Completion status updated successfully for $key');
-      setState(() {
-        completionStatus[key] = value;
-        _updateCompletionPercentage();
-      });
-    } else {
-      print('Failed to update completion status for $key: ${response.statusCode}');
-    }
+  void _saveCompletionData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('completionPercentage', completionPercentage);
+    await prefs.setBool('foodCompleted', completionStatus['food']!);
+    await prefs.setBool('exerciseCompleted', completionStatus['exercise']!);
+    await prefs.setBool('smokingCompleted', completionStatus['smoking']!);
+    await prefs.setBool('alcoholCompleted', completionStatus['alcohol']!);
+    await prefs.setBool('sleepCompleted', completionStatus['sleep']!);
+    await prefs.setBool('waterCompleted', completionStatus['water']!);
   }
 
-  void _updateCompletionPercentage() {
+  void _updateCompletionStatus(String key, bool value) {
+    setState(() {
+      completionStatus[key] = value;
+      _calculateAndUpdateCompletionPercentage();
+    });
+  }
+
+  void _calculateAndUpdateCompletionPercentage() {
     int completed = completionStatus.values.where((v) => v).length;
     int totalTasks = completionStatus.keys.length;
+    double newPercentage = completed / totalTasks;
     setState(() {
-      completionPercentage = (completed / totalTasks);
+      completionPercentage = newPercentage;
     });
-    _updateJourneyPercentage();
-  }
-
-  void _updateJourneyPercentage() async {
-    final url = 'http://192.168.197.83:3000/api/patients/${widget.username}/journey-status';
-    print('Updating journey percentage: $url');
-
-    final response = await http.put(
-      Uri.parse(url),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'key': 'status_percentage',
-        'value': completionPercentage * 100,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      print('Journey percentage updated successfully');
-    } else {
-      print('Failed to update journey percentage: ${response.statusCode}');
-    }
+    _saveCompletionData();
   }
 
   void _resetProgressAtMidnight() {
     DateTime now = DateTime.now();
     DateTime nextMidnight = DateTime(now.year, now.month, now.day + 1);
     Duration timeToMidnight = nextMidnight.difference(now);
-    Timer(timeToMidnight, () {
+
+    resetTimer = Timer(timeToMidnight, () async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
       setState(() {
         completionStatus.updateAll((key, value) => false);
-        _updateCompletionPercentage();
+        completionPercentage = 0.0;
       });
       _resetProgressAtMidnight();
     });
@@ -153,93 +131,95 @@ class _JourneyPageState extends State<JourneyPage> {
           },
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(screenSize.width * 0.05), // Adjust padding based on screen width
-        child: Column(
-          children: [
-            _buildProgressCircle(screenSize),
-            SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
-            _buildJourneyButton(
-              text: 'Food',
-              imagePath: 'images/food.jpg',
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => FoodPage(username : widget.username))).then((_) {
-                  _updateCompletionStatus('food', true);
-                });
-              },
-              screenSize: screenSize,
-            ),
-            SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
-            _buildJourneyButton(
-              text: 'Exercise',
-              imagePath: 'images/exercise.jpg',
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => WarmUpPage())).then((_) {
-                  _updateCompletionStatus('exercise', true);
-                });
-              },
-              screenSize: screenSize,
-            ),
-            if (widget.smoke) SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
-            if (widget.smoke)
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(screenSize.width * 0.05), // Adjust padding based on screen width
+          child: Column(
+            children: [
+              _buildProgressCircle(screenSize),
+              SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
               _buildJourneyButton(
-                text: 'Smoking',
-                imagePath: 'images/smoke.jpg',
+                text: 'Food',
+                imagePath: 'images/food.jpg',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => SmokingPage())).then((_) {
-                    _updateCompletionStatus('smoking', true);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => FoodPage(username: widget.username))).then((_) {
+                    _updateCompletionStatus('food', true);
                   });
                 },
                 screenSize: screenSize,
               ),
-            if (widget.smoke) SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
-            if (widget.alcohol)
+              SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
               _buildJourneyButton(
-                text: 'Alcohol',
-                imagePath: 'images/alcohol.jpg',
+                text: 'Exercise',
+                imagePath: 'images/exercise.jpg',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => AlcoholismPage())).then((_) {
-                    _updateCompletionStatus('al                cohol', true);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => WarmUpPage())).then((_) {
+                    _updateCompletionStatus('exercise', true);
                   });
                 },
                 screenSize: screenSize,
               ),
-            if (widget.alcohol) SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
-            _buildJourneyButton(
-              text: 'Sleep Time',
-              imagePath: 'images/sleep.jpg',
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => SleepingHabitsPage())).then((_) {
-                  _updateCompletionStatus('sleep', true);
-                });
-              },
-              screenSize: screenSize,
-            ),
-            SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
-            _buildJourneyButton(
-              text: 'Water',
-              imagePath: 'images/water.jpg',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WaterMonitoringApp(
-                      username: widget.username,
-                      name: widget.name,
-                      age: widget.age,
-                      gender: widget.gender,
-                      maritalStatus: widget.maritalStatus,
-                      smoke: widget.smoke,
-                      alcohol: widget.alcohol,
+              if (widget.smoke) SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
+              if (widget.smoke)
+                _buildJourneyButton(
+                  text: 'Smoking',
+                  imagePath: 'images/smoke.jpg',
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => SmokingPage(username : widget.username))).then((_) {
+                      _updateCompletionStatus('smoking', true);
+                    });
+                  },
+                  screenSize: screenSize,
+                ),
+              if (widget.smoke) SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
+              if (widget.alcohol)
+                _buildJourneyButton(
+                  text: 'Alcohol',
+                  imagePath: 'images/alcohol.jpg',
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => AlcoholismPage(username : widget.username))).then((_) {
+                      _updateCompletionStatus('alcohol', true);
+                    });
+                  },
+                  screenSize: screenSize,
+                ),
+              if (widget.alcohol) SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
+              _buildJourneyButton(
+                text: 'Sleep Time',
+                imagePath: 'images/sleep.jpg',
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => SleepingHabitsPage(username : widget.username))).then((_) {
+                    _updateCompletionStatus('sleep', true);
+                  });
+                },
+                screenSize: screenSize,
+              ),
+              SizedBox(height: screenSize.height * 0.03), // Adjust vertical spacing based on screen height
+              _buildJourneyButton(
+                text: 'Water',
+                imagePath: 'images/water.jpg',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => WaterMonitoringApp(
+                        username: widget.username,
+                        name: widget.name,
+                        age: widget.age,
+                        gender: widget.gender,
+                        maritalStatus: widget.maritalStatus,
+                        smoke: widget.smoke,
+                        alcohol: widget.alcohol,
+                      ),
                     ),
-                  ),
-                ).then((_) {
-                  _updateCompletionStatus('water', true);
-                });
-              },
-              screenSize: screenSize,
-            ),
-          ],
+                  ).then((_) {
+                    _updateCompletionStatus('water', true);
+                  });
+                },
+                screenSize: screenSize,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -344,4 +324,3 @@ class _JourneyPageState extends State<JourneyPage> {
     );
   }
 }
-

@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:untitled2/pages/Patients/journey/journey_page.dart';
 import '../user_details_page.dart'; // Import UserDetailsPage
+import 'package:http/http.dart' as http;
 
 class WaterMonitoringApp extends StatelessWidget {
   final String username;
@@ -113,22 +116,47 @@ class _WaterMonitoringScreenState extends State<WaterMonitoringScreen> {
     );
   }
 
-  void navigateToSubmitScreen() {
-    // Navigate to the submit screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SubmitScreen(
-          username: widget.username,
-          name: widget.name,
-          age: widget.age,
-          gender: widget.gender,
-          maritalStatus: widget.maritalStatus,
-          smoke: widget.smoke,
-          alcohol: widget.alcohol,
-        ),
-      ),
-    );
+  Future<void> submitWaterIntake() async {
+    String apiUrl = 'http://192.168.197.83:3000/api/patients/${widget.username}/updateWaterIntake'; // Replace with your API URL
+
+    Map<String, dynamic> waterIntakeData = {
+      'intake': currentIntake,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(waterIntakeData),
+      );
+
+      if (response.statusCode == 200) {
+        print('Water intake data submitted successfully');
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => JourneyPage(
+              username: widget.username,
+              name: widget.name,
+              age: widget.age,
+              gender: widget.gender,
+              maritalStatus: widget.maritalStatus,
+              smoke: widget.smoke,
+              alcohol: widget.alcohol,
+            ),
+          ),
+          (Route<dynamic> route) => false,
+        );
+      } else {
+        print('Failed to submit water intake data: ${response.statusCode}');
+        // Handle the error appropriately
+      }
+    } catch (error) {
+      print('Error submitting water intake data: $error');
+      // Handle the error appropriately
+    }
   }
 
   @override
@@ -243,7 +271,7 @@ class _WaterMonitoringScreenState extends State<WaterMonitoringScreen> {
         ],
       ),
       bottomNavigationBar: GestureDetector(
-        onTap: navigateToSubmitScreen,
+        onTap: submitWaterIntake,
         child: Container(
           color: Colors.blueAccent, // Blue accent color for footer
           height: 50.0,
@@ -316,61 +344,5 @@ class WaterDrop {
 
   void fall() {
     y += speed;
-  }
-}
-
-class SubmitScreen extends StatelessWidget {
-  final String username;
-  final String name;
-  final String age;
-  final String gender;
-  final String maritalStatus;
-  final bool smoke;
-  final bool alcohol;
-
-  SubmitScreen({
-    required this.username,
-    required this.name,
-    required this.age,
-    required this.gender,
-    required this.maritalStatus,
-    required this.smoke,
-    required this.alcohol,
-  });
-
-  void navigateBackToUserDetails(BuildContext context) {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UserDetailsPage(
-          username: username,
-          name: name,
-          age: age,
-          gender: gender,
-          maritalStatus: maritalStatus,
-          smoke: smoke,
-          alcohol: alcohol,
-        ),
-      ),
-          (Route<dynamic> route) => false,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Submit Screen'),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => navigateBackToUserDetails(context),
-          child: Text(
-            'Submit your data here.',
-            style: TextStyle(fontSize: 24.0),
-          ),
-        ),
-      ),
-    );
   }
 }

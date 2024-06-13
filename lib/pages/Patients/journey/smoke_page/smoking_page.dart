@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // For jsonEncode
 import '../user_details_page.dart'; // Importing the user_details_page.dart to navigate to it
 import 'package:video_player/video_player.dart';
 
 class SmokingPage extends StatefulWidget {
+  final String username;
+
+  SmokingPage({required this.username}); // Accept username as a parameter
+
   @override
   _SmokingPageState createState() => _SmokingPageState();
 }
@@ -106,7 +112,7 @@ class _SmokingPageState extends State<SmokingPage> {
           ],
           SizedBox(height: 32.0),
           ElevatedButton(
-            onPressed: canSubmit ? _submitForm : null,
+            onPressed: canSubmit ?()=> _submitForm(widget.username) : null,
             child: Text('Submit'),
           ),
         ],
@@ -114,14 +120,36 @@ class _SmokingPageState extends State<SmokingPage> {
     );
   }
 
-  void _submitForm() {
-    // Handle form submission
-    print('Submit button pressed');
-    print('Smoked Today: $_smokedToday');
-    if (_smokedToday == 'yes') {
-      print('Cigarettes Smoked: $_cigarettesSmoked');
-    }
+  void _submitForm(String username) async {
+    // API endpoint URL
+     String apiUrl = 'http://192.168.197.83:3000/api/patients/${username}/updateSmokeItems'; // Replace with your API URL
 
-    Navigator.pop(context); // Navigate back to the previous page
+    // Prepare data to be sent
+    Map<String, dynamic> smokeData = {
+      'consumed_smoke_today': _smokedToday,
+      'cigarettes_consumed': _cigarettesSmoked,
+    };
+
+    try {
+      // Make the HTTP POST request
+      final response = await http.post(
+        Uri.parse(apiUrl), // Use the username from the widget
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(smokeData),
+      );
+
+      if (response.statusCode == 200) {
+        print('Data submitted successfully');
+        Navigator.pop(context); // Navigate back to the previous page
+      } else {
+        print('Failed to submit data: ${response.statusCode}');
+        // Handle the error appropriately
+      }
+    } catch (error) {
+      print('Error submitting data: $error');
+      // Handle the error appropriately
+    }
   }
 }

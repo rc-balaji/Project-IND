@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SleepingHabitsPage extends StatefulWidget {
+  final String username;
+
+  SleepingHabitsPage({required this.username}); // Accept username as a parameter
+
   @override
   _SleepingHabitsPageState createState() => _SleepingHabitsPageState();
 }
@@ -28,6 +34,12 @@ class _SleepingHabitsPageState extends State<SleepingHabitsPage> {
   void dispose() {
     super.dispose();
     _controller.dispose();
+  }
+
+  bool _canSubmit() {
+    return _sleepQuality != null &&
+        _undisturbedSleepHours != null &&
+        _napDuration != null;
   }
 
   @override
@@ -77,7 +89,7 @@ class _SleepingHabitsPageState extends State<SleepingHabitsPage> {
 
           Center(
             child: ElevatedButton(
-              onPressed: _canSubmit() ? () => _submitForm(context) : null,
+              onPressed: _canSubmit() ? () => _submitForm(widget.username) : null,
               child: Text('Submit'),
             ),
           ),
@@ -132,20 +144,38 @@ class _SleepingHabitsPageState extends State<SleepingHabitsPage> {
     }
   }
 
-  bool _canSubmit() {
-    return _sleepQuality != null &&
-        _undisturbedSleepHours != null &&
-        _napDuration != null;
-  }
+  void _submitForm(String username) async {
+    // API endpoint URL
+    String apiUrl = 'http://192.168.197.83:3000/api/patients/${username}/updateSleepingHabits'; // Replace with your API URL
 
-  void _submitForm(BuildContext context) {
-    // Handle form submission
-    print('Sleep quality: $_sleepQuality');
-    print('Undisturbed sleep hours: $_undisturbedSleepHours');
-    print('Nap duration: $_napDuration');
-    // Add your logic here for handling the form submission
+    // Prepare data to be sent
+    Map<String, dynamic> sleepingHabitsData = {
+      'status': true, // Assuming you want to send the status as true
+      'sleep_quality': _sleepQuality,
+      'undisturbed_sleep_hours': _undisturbedSleepHours,
+      'nap_duration': _napDuration,
+    };
 
-    // Navigate back to UserDetailsPage
-    Navigator.pop(context);
+    try {
+      // Make the HTTP POST request
+      final response = await http.post(
+        Uri.parse(apiUrl), // Use the username from the widget
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(sleepingHabitsData),
+      );
+
+      if (response.statusCode == 200) {
+        print('Data submitted successfully');
+        Navigator.pop(context); // Navigate back to the previous page
+      } else {
+        print('Failed to submit data: ${response.statusCode}');
+        // Handle the error appropriately
+      }
+    } catch (error) {
+      print('Error submitting data: $error');
+      // Handle the error appropriately
+    }
   }
 }

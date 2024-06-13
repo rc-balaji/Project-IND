@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
-import 'medicine_reminder_page.dart'; // Import MedicineReminderPage
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'medicine_reminder_page.dart';
 
 class PD_EntryPage extends StatefulWidget {
   @override
   _PD_EntryPageState createState() => _PD_EntryPageState();
+  final String patientId;
+  PD_EntryPage({required this.patientId});
 }
 
 class _PD_EntryPageState extends State<PD_EntryPage> {
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _bpController = TextEditingController();
-  final TextEditingController _waistCircumferenceController =
-  TextEditingController();
-  final TextEditingController _fastingBloodSugarController =
-  TextEditingController();
-  final TextEditingController _ldlCholesterolController =
-  TextEditingController();
-  final TextEditingController _hdlCholesterolController =
-  TextEditingController();
-  final TextEditingController _triglycerideController =
-  TextEditingController();
+  final TextEditingController _waistCircumferenceController = TextEditingController();
+  final TextEditingController _fastingBloodSugarController = TextEditingController();
+  final TextEditingController _ldlCholesterolController = TextEditingController();
+  final TextEditingController _hdlCholesterolController = TextEditingController();
+  final TextEditingController _triglycerideController = TextEditingController();
 
   final FocusNode _heightFocusNode = FocusNode();
   final FocusNode _weightFocusNode = FocusNode();
@@ -31,6 +30,32 @@ class _PD_EntryPageState extends State<PD_EntryPage> {
   final FocusNode _triglycerideFocusNode = FocusNode();
 
   String _warningMessage = '';
+
+  Future<void> _sendPatientDetails() async {
+    final url = Uri.parse('http://192.168.183.83:3000/api/updatePatientDetails');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'patientId': widget.patientId,
+        'patient_details': {
+          'height': _heightController.text,
+          'weight': _weightController.text,
+          'bp': _bpController.text,
+          'waist_circumference': _waistCircumferenceController.text,
+          'fasting_blood_sugar': _fastingBloodSugarController.text,
+          'ldl_cholesterol': _ldlCholesterolController.text,
+          'hdl_cholesterol': _hdlCholesterolController.text,
+          'triglyceride': _triglycerideController.text,
+        }
+      }),
+    );
+    if (response.statusCode == 200) {
+      print('Patient details sent successfully');
+    } else {
+      print('Failed to send patient details');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +155,7 @@ class _PD_EntryPageState extends State<PD_EntryPage> {
               controller: _fastingBloodSugarController,
               focusNode: _fastingBloodSugarFocusNode,
               nextFocusNode: _ldlCholesterolFocusNode,
-              imagePath: 'images/fasting_blood sugar_img.jpg',
+              imagePath: 'images/fasting_blood_sugar_img.jpg',
             ),
             _buildFeatureButton(
               labelText: 'LDL Cholesterol (mg/dL)',
@@ -183,8 +208,7 @@ class _PD_EntryPageState extends State<PD_EntryPage> {
           child: Image.asset(
             imagePath,
             fit: BoxFit.cover, // or use BoxFit.fill to stretch the image
-          ),
-        ),
+          ),        ),
         SizedBox(height: 10),
         Text(
           labelText,
@@ -198,8 +222,7 @@ class _PD_EntryPageState extends State<PD_EntryPage> {
             labelText: 'Enter value',
           ),
           keyboardType: TextInputType.number,
-          textInputAction:
-          isLast ? TextInputAction.done : TextInputAction.next,
+          textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
           onFieldSubmitted: (_) {
             focusNode.unfocus();
             if (nextFocusNode != null) {
@@ -214,12 +237,14 @@ class _PD_EntryPageState extends State<PD_EntryPage> {
     );
   }
 
-  void _handleSubmitted() {
+  void _handleSubmitted() async {
     if (_validateForm()) {
-      // Navigate to the Medicine Reminder page
+      await _sendPatientDetails();
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => Medicine()),
+        MaterialPageRoute(
+          builder: (context) => Medicine(patientId: widget.patientId),
+        ),
       );
     }
   }
@@ -238,29 +263,11 @@ class _PD_EntryPageState extends State<PD_EntryPage> {
       });
       return false;
     }
+    setState(() {
+      _warningMessage = '';
+    });
     return true;
   }
-
-  @override
-  void dispose() {
-    _heightController.dispose();
-    _weightController.dispose();
-    _bpController.dispose();
-    _waistCircumferenceController.dispose();
-    _fastingBloodSugarController.dispose();
-    _ldlCholesterolController.dispose();
-    _hdlCholesterolController.dispose();
-    _triglycerideController.dispose();
-
-    _heightFocusNode.dispose();
-    _weightFocusNode.dispose();
-    _bpFocusNode.dispose();
-    _waistCircumferenceFocusNode.dispose();
-    _fastingBloodSugarFocusNode.dispose();
-    _ldlCholesterolFocusNode.dispose();
-    _hdlCholesterolFocusNode.dispose();
-    _triglycerideFocusNode.dispose();
-
-    super.dispose();
-  }
 }
+
+       

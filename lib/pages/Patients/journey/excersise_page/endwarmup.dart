@@ -139,8 +139,8 @@ class _CoolWarmupPageState extends State<CoolWarmupPage> {
                           age: '25', // Replace with actual value
                           gender: 'Male', // Replace with actual value
                           maritalStatus: 'Single', // Replace with actual value
-                          smoke: false, // Replace with actual value
-                          alcohol: false, // Replace with actual value
+                          smoke: true, // Replace with actual value
+                          alcohol: true, // Replace with actual value
                         ),
                       ),
                     );

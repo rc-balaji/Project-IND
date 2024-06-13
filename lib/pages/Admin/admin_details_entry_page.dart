@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'Patients_Entry_Page/PD_entry_page.dart';
 
 class AdminDetailsEntryPage extends StatefulWidget {
@@ -10,19 +12,35 @@ class _AdminDetailsEntryPageState extends State<AdminDetailsEntryPage> {
   final TextEditingController _patientIdController = TextEditingController();
   String _warning = '';
 
-  void _checkPatientId(BuildContext context) {
-    // Add logic to check patient ID
-    String patientId = _patientIdController.text;
-    // Example logic: Check if patientId is valid
-    if (patientId.isNotEmpty && patientId == 'Id') {
-      // Navigate to PD_EntryPage (Patient Details Entry Page)
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => PD_EntryPage()),
-      );
+  Future<bool> _checkPatientId(String patientId) async {
+    final response = await http.get(Uri.parse('http://192.168.183.83:3000/api/checkPatientId?patientId=$patientId'));
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['exists'];
     } else {
+      throw Exception('Failed to check patient ID');
+    }
+  }
+
+  void _onSubmit(BuildContext context) async {
+    String patientId = _patientIdController.text;
+    
+    try {
+      bool isValid = await _checkPatientId(patientId);
+      if (isValid) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PD_EntryPage(patientId: patientId)),
+        );
+      } else {
+        setState(() {
+          _warning = 'Invalid patient ID. Please try again.';
+        });
+      }
+    } catch (error) {
       setState(() {
-        _warning = 'Invalid patient ID. Please try again.';
+        _warning = 'Error fetching data. Please try again later.';
       });
     }
   }
@@ -46,33 +64,31 @@ class _AdminDetailsEntryPageState extends State<AdminDetailsEntryPage> {
           ),
           child: AppBar(
             title: Text('Admin Details Entry'),
-            backgroundColor: Colors.transparent, // Set app bar color to transparent
-            elevation: 0, // Remove app bar elevation
+            backgroundColor: Colors.transparent,
+            elevation: 0,
           ),
         ),
       ),
       body: Container(
-        color: Colors.white, // Set background color to white
+        color: Colors.white,
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.1, // 10% of screen width
-              vertical: screenHeight * 0.05, // 5% of screen height
+              horizontal: screenWidth * 0.1,
+              vertical: screenHeight * 0.05,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                // Image above the patient ID
                 Image.asset(
-                  'images/admin_img.jpg', // Path to your image asset
-                  width: screenWidth * 0.6, // 60% of screen width
-                  height: screenHeight * 0.3, // 30% of screen height
+                  'images/admin_img.jpg',
+                  width: screenWidth * 0.6,
+                  height: screenHeight * 0.3,
                 ),
-                SizedBox(height: screenHeight * 0.05), // 5% of screen height
-                // UI for entering patient ID
+                SizedBox(height: screenHeight * 0.05),
                 Text(
                   'Enter Patient ID',
-                  style: TextStyle(fontSize: screenWidth * 0.05), // Adjust text size based on screen width
+                  style: TextStyle(fontSize: screenWidth * 0.05),
                 ),
                 TextField(
                   controller: _patientIdController,
@@ -80,21 +96,20 @@ class _AdminDetailsEntryPageState extends State<AdminDetailsEntryPage> {
                     hintText: 'Patient ID',
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.02), // 2% of screen height
+                SizedBox(height: screenHeight * 0.02),
                 ElevatedButton(
                   onPressed: () {
-                    // Call the method to check patient ID
-                    _checkPatientId(context);
+                    _onSubmit(context);
                   },
                   child: Text(
                     'Submit',
-                    style: TextStyle(fontSize: screenWidth * 0.045), // Adjust button text size
+                    style: TextStyle(fontSize: screenWidth * 0.045),
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.02), // 2% of screen height
+                SizedBox(height: screenHeight * 0.02),
                 Text(
                   _warning,
-                  style: TextStyle(color: Colors.red, fontSize: screenWidth * 0.04), // Adjust warning text size
+                  style: TextStyle(color: Colors.red, fontSize: screenWidth * 0.04),
                 ),
               ],
             ),
@@ -102,13 +117,13 @@ class _AdminDetailsEntryPageState extends State<AdminDetailsEntryPage> {
         ),
       ),
       bottomNavigationBar: Container(
-        height: screenHeight * 0.1, // 10% of screen height
+        height: screenHeight * 0.1,
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, Colors.purpleAccent], // Gradient from white to purpleAccent
+            colors: [Colors.white, Colors.purpleAccent],
           ),
         ),
       ),

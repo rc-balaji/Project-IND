@@ -1,5 +1,129 @@
-const Patient = require('../models/patient.js');
+const Patient = require('../models/patient');
 const moment = require('moment');
+
+
+var struct = (currentdate)=>{
+
+  return {
+    date: currentdate,
+    status_percentage: 0,
+    status: false,
+    food: {},
+    exercise: { status: false, actions: [] },
+    sleeping_habits:  {
+      status: false, // Assuming you want to send the status as true
+      sleep_quality: "",
+      undisturbed_sleep_hours: "",
+      nap_duration: "",
+    },
+    water: {
+      intake: 0,
+    },
+    alcohol: {
+      consumedAlcoholToday: "",
+      glassesConsumed: 0,
+    },
+    smoke: {
+      consumed_smoke_today: "",
+      cigarettes_consumed: 0,
+    }
+  };
+}
+exports.addMedicationList = async (req, res) => {
+  console.log("Adding Medication List");
+  try {
+    const { patient_id, medication_list } = req.body;
+    
+    const patient = await Patient.findOne({ username: patient_id });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    // Update medication_list field in the patient document
+    patient.medication_list = medication_list;
+
+    // Save the updated patient document
+    await patient.save();
+
+    res.status(200).json({ message: 'Medication list added successfully' });
+  } catch (error) {
+    console.error('Error adding medication list:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.updatePatientDetails = async (req, res) => {
+  const { patientId } = req.body;
+  const patientDetails = req.body.patient_details;
+
+  try {
+    const patient = await Patient.findOneAndUpdate(
+      { username: patientId },
+      { $set: { 'patient_details': {...patientDetails,medication_list:[]} } },
+      { new: true }
+    );
+
+    if (patient) {
+      res.status(200).json({ message: 'Patient details updated successfully', patient });
+    } else {
+      res.status(404).json({ message: 'Patient not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.checkPatientId = async (req, res) => {
+  const { patientId } = req.query;
+  try {
+    const patient = await Patient.findOne({ username: patientId });
+    if (patient) {
+      res.json({ exists: true });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// Create a new patient
+
+exports.getPatient = async (req, res) => {
+  console.log("VVVVVVVVVVVVVVV");
+  const { sortBy, username, date } = req.query;
+  let sortCriteria = {};
+
+  if (sortBy === 'username') {
+    sortCriteria = { username: 1 };
+  } else if (sortBy === 'date') {
+    sortCriteria = { 'journey.registered_Date': -1 };
+  }
+
+  try {
+    let patients;
+
+    if (username) {
+      patients = await Patient.find({ username }).exec();
+    } else if (date) {
+      patients = await Patient.find().exec();
+      patients = patients.map(patient => ({
+        username: patient.username,
+        records: patient.journey.records.filter(record => record.date === date)
+      }));
+    } else {
+      patients = await Patient.find().sort(sortCriteria).exec();
+    }
+
+    console.log(patients);
+    res.json(patients);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 exports.createPatient = async (req, res) => {
   const { username, password } = req.body;
   const newPatient = new Patient({
@@ -13,72 +137,8 @@ exports.createPatient = async (req, res) => {
     alcohol: false,
     smoke: false,
     journey: {
-      registered_Date: '', // This should ideally be set to the current date but left empty as per request
-      records: [
-        {
-          date: '',
-          status_percentage: null,
-          status: false,
-          food: {
-            status: false,
-            Fruits: [
-              { name: '', quantity: '' },
-              { name: '', quantity: '' }
-            ],
-            Vegetables: [
-              { name: '', quantity: '' },
-              { name: '', quantity: '' }
-            ],
-            Sprouts_and_Nuts: [
-              { name: '', quantity: '' },
-              { name: '', quantity: '' }
-            ],
-            Spinach: [
-              { name: '', quantity: '' }
-            ],
-            Baked_Items: [
-              { name: '', quantity: '' }
-            ],
-            Non_Veg: [
-              { name: '', quantity: '' }
-            ],
-            Salt: [
-              { name: '', quantity: '' }
-            ],
-            Drinks: [
-              { name: '', quantity: '' }
-            ],
-          },
-          excersies: {
-            status: false,
-            actions: [
-              { name: '', status: '', durationMinutes: null, reason: '' },
-              { name: '', status: '', durationMinutes: null, reason: '' },
-              { name: '', status: '', durationMinutes: null, reason: '' },
-            ]
-          },
-          sleeping_habits: {
-            status: false,
-            sleep_quality: '',
-            undisturbed_sleep_hours: '',
-            nap_duration: ''
-          },
-          water: {
-            status: false,
-            intake: null
-          },
-          alcohol: {
-            isHave: false,
-            consumed_alcohol_today: '',
-            glasses_consumed: null
-          },
-          smoke: {
-            isHave: false,
-            consumed_smoke_today: '',
-            cigarettes_consumed: null
-          }
-        }
-      ]
+      registered_Date: '', // To be set to the current date or kept empty as per requirements
+      records: []
     },
     patient_details: {
       height: null,
@@ -89,18 +149,7 @@ exports.createPatient = async (req, res) => {
       ldl_cholesterol: null,
       hdl_cholesterol: null,
       triglyceride: null,
-      medication_list: [
-        {
-          name: '',
-          start_date: '',
-          end_date: '',
-          times: [
-            { name: '', time: '' },
-            { name: '', time: '' },
-            { name: '', time: '' },
-          ]
-        }
-      ]
+      medication_list: []
     }
   });
 
@@ -112,20 +161,18 @@ exports.createPatient = async (req, res) => {
   }
 };
 
-
+// Update patient profile
 exports.updatePatientProfile = async (req, res) => {
   const { username } = req.params;
   const { password, name, age, gender, maritalStatus, occupation, alcohol, smoke, journey } = req.body;
 
   try {
-    // Find the patient by username
-    let patient = await Patient.findOne({ username });
+    const patient = await Patient.findOne({ username });
 
     if (!patient) {
       return res.status(404).send({ message: 'Patient not found' });
     }
 
-    // Update the patient's details
     patient.password = password || patient.password;
     patient.name = name || patient.name;
     patient.age = age || patient.age;
@@ -136,7 +183,6 @@ exports.updatePatientProfile = async (req, res) => {
     patient.smoke = smoke != null ? smoke : patient.smoke;
     patient.journey.registered_Date = journey.registered_Date || patient.journey.registered_Date;
 
-    // Save the updated patient
     await patient.save();
 
     res.status(200).send(patient);
@@ -145,36 +191,7 @@ exports.updatePatientProfile = async (req, res) => {
   }
 };
 
-exports.updatePatient = async (req, res) => {
-  const { username } = req.params;
-  const updateData = req.body;
-
-  try {
-    // Find the patient by username
-    let patient = await Patient.findOne({ username });
-    if (!patient) {
-      return res.status(404).send({ message: 'Patient not found' });
-    }
-
-    // Update the patient's details
-    patient.set(updateData);
-
-    // Ensure the registered_Date is updated if provided
-    if (updateData.journey && updateData.journey.registered_Date) {
-      patient.journey.registered_Date = updateData.journey.registered_Date;
-    }
-
-    // Save the updated patient
-    await patient.save();
-    
-    res.status(200).send(patient);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-};
-
-
-
+// Authenticate patient
 exports.authenticatePatient = async (req, res) => {
   const { username, password } = req.body;
 
@@ -198,205 +215,202 @@ exports.authenticatePatient = async (req, res) => {
   }
 };
 
-exports.getPatients = async (req, res) => {
-  try {
-    const patients = await Patient.find();
-    res.status(200).send(patients);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-};
-
-exports.getPatientByUsername = async (req, res) => {
-  const { username } = req.params;
-  try {
-    const patient = await Patient.findOne({ username });
-    if (patient) {
-      res.status(200).send(patient);
-    } else {
-      res.status(404).send({ message: 'Patient not found' });
-    }
-  } catch (error) {
-    res.status(500).send(error);
-  }
-};
-
-
-exports.getJourneyStatus = async (req, res) => {
-  const { username } = req.params;
-  const currentDate = moment().format('DD/MM/YYYY');
-  console.log(`Fetching journey status for user: ${username}`);
-
+// Update food items
+exports.updateFoodItems = async (req, res) => {
+  const { username, food } = req.params;
+  const foodItems = req.body;
+  console.log("Gettttttt");
   try {
     const patient = await Patient.findOne({ username });
     if (!patient) {
-      console.log(`Patient not found with username: ${username}`);
       return res.status(404).send({ message: 'Patient not found' });
     }
 
+    const currentDate = moment().format('DD/MM/YYYY');
     let todayRecord = patient.journey.records.find(record => record.date === currentDate);
 
     if (!todayRecord) {
-      console.log(`No record found for today (${currentDate}) for user: ${username}`);
-      todayRecord = {
-        date: currentDate,
-        status_percentage: 0,
-        status: false,
-        food: { status: false },
-        exercise: { status: false },
-        smoking: { status: false },
-        alcohol: { status: false },
-        smoke: { status: false },
-        sleep: { status: false },
-        water: { status: false },
-      };
+      todayRecord = struct(currentDate);
       patient.journey.records.push(todayRecord);
       await patient.save();
     }
-
-    console.log(todayRecord);
-    console.log(`Successfully fetched journey status for user: ${username}`);
-    res.status(200).send(todayRecord);
-  } catch (error) {
-    console.error(`Error fetching journey status for user: ${username}`, error);
-    res.status(500).send(error);
-  }
-};
-
-exports.updateJourneyStatus = async (req, res) => {
-  const { username } = req.params;
-  var { key, value } = req.body;
-  const currentDate = moment().format('DD/MM/YYYY');
-  console.log(`Updating journey status for user: ${username}`);
-
-  try {
-    const patient = await Patient.findOne({ username });
-    if (!patient) {
-      console.log(`Patient not found with username: ${username}`);
-      return res.status(404).send({ message: 'Patient not found' });
-    }
-
-    let todayRecord = patient.journey.records.find(record => record.date === currentDate);
+    console.log(todayRecord+"\n"+foodItems.food.Fruits);
+    
+    todayRecord = patient.journey.records.find(record => record.date === currentDate);
+    console.log("sssssssssssssssssssssssssssssxsxsx");
     
     console.log(todayRecord);
-    // todayRecord
-
-    if (!todayRecord) {
-      console.log(`No record found for today (${currentDate}) for user: ${username}`);
-      return res.status(404).send({ message: 'Record for today not found' });
-    }
-
-    console.log(key+" "+value);
-
-    value = Math.ceil(value)
-    todayRecord.status_percentage = value
-    
-    if(value==100){
-      todayRecord.status = true
-      }else{
-      todayRecord.status = false
-
-    }
+    todayRecord.food[food] = foodItems.food[food];
 
     await patient.save();
-
-
-    console.log(`Successfully updated journey status for user: ${username}`);
     res.status(200).send(todayRecord);
   } catch (error) {
-    console.error(`Error updating journey status for user: ${username}`, error);
     res.status(500).send(error);
   }
 };
 
+// Update smoke items
 
-
-exports.updateFoodItems = async (req, res) => {
-  const { username,food } = req.params;
-  const foodItems = req.body;
-
-  items = foodItems.food[food];
-
-  try {
-    const patient = await Patient.findOne({ username });
-    if (!patient) {
-      console.log(`Patient not found with username: ${username}`);
-      return res.status(404).send({ message: 'Patient not found' });
-    }
-
-    const currentDate = moment().format('DD/MM/YYYY');
-    let todayRecord = patient.journey.records.find(record => record.date === currentDate);
-
-    console.log(todayRecord);
-
-    if (!todayRecord) {
-      console.log(`No record found for today (${currentDate}) for user: ${username}`);
-      todayRecord = {
-        date: currentDate,
-        status_percentage: 0,
-        status: false,
-        food: { status: false },
-        exercise: { status: false },
-        smoking: { status: false },
-        alcohol: { status: false },
-        sleep: { status: false },
-        water: { status: false },
-      };
-      patient.journey.records.push(todayRecord);
-    }
-
-    todayRecord.food[food] = items;
-
-    await patient.save();
-
-    console.log(`Successfully updated ${food} items for user: ${username}`);
-    res.status(200).send(todayRecord);
-  } catch (error) {
-    console.error(`Error updating baked items for user: ${username}`, error);
-    res.status(500).send(error);
-  }
-};
 exports.updateSmokeItems = async (req, res) => {
-  const { username,food } = req.params;
+  const { username } = req.params;
   const smoke = req.body;
 
+  console.log(smoke);
 
   try {
     const patient = await Patient.findOne({ username });
     if (!patient) {
-      console.log(`Patient not found with username: ${username}`);
       return res.status(404).send({ message: 'Patient not found' });
     }
 
     const currentDate = moment().format('DD/MM/YYYY');
     let todayRecord = patient.journey.records.find(record => record.date === currentDate);
 
-
     if (!todayRecord) {
-      console.log(`No record found for today (${currentDate}) for user: ${username}`);
-      todayRecord = {
-        date: currentDate,
-        status_percentage: 0,
-        status: false,
-        food: { status: false },
-        exercise: { status: false },
-        smoking: { status: false },
-        alcohol: { status: false },
-        sleep: { status: false },
-        water: { status: false },
-      };
+      todayRecord = struct(currentDate)
       patient.journey.records.push(todayRecord);
     }
 
-    todayRecord.smoke = smoke;
-    todayRecord.smoke.status = true;
+    console.log(todayRecord);
+    
+    todayRecord.smoke.consumed_smoke_today= smoke.consumed_smoke_today;
+    todayRecord.smoke.cigarettes_consumed = smoke.cigarettes_consumed;
+
+    console.log("sssssssssssssssssssssssssssssssssssssssssssssssss\n");
+    console.log(todayRecord);
 
     await patient.save();
-
-    console.log(`Successfully updated ${smoke} items for user: ${username}`);
     res.status(200).send(todayRecord);
   } catch (error) {
-    console.error(`Error updating ${smoke} items for user: ${username}`, error);
     res.status(500).send(error);
+  }
+};
+
+
+exports.updateAlcoItems  =  async (req, res) => {
+  const { username } = req.params;
+  const alcohol = req.body;
+
+
+  console.log("Getttting ALco");
+  try {
+    const patient = await Patient.findOne({ username });
+    if (!patient) {
+      return res.status(404).send({ message: 'Patient not found' });
+    }
+
+    const currentDate = moment().format('DD/MM/YYYY');
+    let todayRecord = patient.journey.records.find(record => record.date === currentDate);
+
+    if (!todayRecord) {
+      todayRecord = struct(currentDate);
+      patient.journey.records.push(todayRecord);
+    }
+
+    todayRecord.alcohol.consumedAlcoholToday = alcohol.consumedAlcoholToday;
+    todayRecord.alcohol.glassesConsumed = alcohol.glassesConsumed;
+
+    await patient.save();
+    res.status(200).send(todayRecord);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+}
+exports.updateWaterItems  =  async (req, res) => {
+  const { username } = req.params;
+  const water = req.body;
+
+
+  console.log("Getttting ALco");
+  try {
+    const patient = await Patient.findOne({ username });
+    if (!patient) {
+      return res.status(404).send({ message: 'Patient not found' });
+    }
+
+    const currentDate = moment().format('DD/MM/YYYY');
+    let todayRecord = patient.journey.records.find(record => record.date === currentDate);
+
+    if (!todayRecord) {
+      todayRecord = struct(currentDate);
+      patient.journey.records.push(todayRecord);
+    }
+
+    todayRecord.water.intake = water.intake;
+
+
+    await patient.save();
+    res.status(200).send(todayRecord);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+}
+
+exports.updateSleepItems  =  async (req, res) => {
+  const { username } = req.params;
+  const sleep = req.body;
+
+
+  console.log("Getttting ALco");
+  try {
+    const patient = await Patient.findOne({ username });
+    if (!patient) {
+      return res.status(404).send({ message: 'Patient not found' });
+    }
+
+    const currentDate = moment().format('DD/MM/YYYY');
+    let todayRecord = patient.journey.records.find(record => record.date === currentDate);
+
+    if (!todayRecord) {
+      todayRecord = struct(currentDate);
+      patient.journey.records.push(todayRecord);
+    }
+
+    todayRecord.sleeping_habits.status = true;
+    todayRecord.sleeping_habits.sleep_quality = sleep.sleep_quality;
+    todayRecord.sleeping_habits.undisturbed_sleep_hours = sleep.undisturbed_sleep_hours;
+    todayRecord.sleeping_habits.nap_duration = sleep.nap_duration;
+ 
+
+
+    await patient.save();
+    res.status(200).send(todayRecord);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+}
+
+
+
+
+
+
+// Get journey percentage
+exports.getJourneyPercentage = async (req, res) => {
+  try {
+    const patient = await Patient.findOne({ username: req.params.username });
+    if (!patient) {
+      return res.status(404).send('Patient not found');
+    }
+    res.json({ status_percentage: patient.journey.status_percentage || 0 });
+  } catch (error) {
+    res.status(500).send('Server error');
+  }
+};
+
+// Update journey percentage
+exports.updateJourneyPercentage = async (req, res) => {
+  try {
+    const patient = await Patient.findOneAndUpdate(
+      { username: req.params.username },
+      { $set: { 'journey.status_percentage': req.body.status_percentage } },
+      { new: true }
+    );
+    if (!patient) {
+      return res.status(404).send('Patient not found');
+    }
+    res.send('Journey percentage updated');
+  } catch (error) {
+    res.status(500).send('Server error');
   }
 };

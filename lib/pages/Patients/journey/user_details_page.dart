@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'journey_page.dart';
-import '../MyProfile_Page/profile_page.dart'; // Ensure you have this import for ProfilePage
+import '../MyProfile_Page/profile_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserDetailsPage extends StatefulWidget {
@@ -47,16 +47,12 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   void _loadCompletionStatus() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      completionStatus['food'] = prefs.getBool('food') ?? false;
-      completionStatus['exercise'] = prefs.getBool('exercise') ?? false;
-      if (widget.smoke) {
-        completionStatus['smoking'] = prefs.getBool('smoking') ?? false;
-      }
-      if (widget.alcohol) {
-        completionStatus['alcohol'] = prefs.getBool('alcohol') ?? false;
-      }
-      completionStatus['sleep'] = prefs.getBool('sleep') ?? false;
-      completionStatus['water'] = prefs.getBool('water') ?? false;
+      completionStatus['food'] = prefs.getBool('foodCompleted') ?? false;
+      completionStatus['exercise'] = prefs.getBool('exerciseCompleted') ?? false;
+      completionStatus['smoking'] = prefs.getBool('smokingCompleted') ?? false;
+      completionStatus['alcohol'] = prefs.getBool('alcoholCompleted') ?? false;
+      completionStatus['sleep'] = prefs.getBool('sleepCompleted') ?? false;
+      completionStatus['water'] = prefs.getBool('waterCompleted') ?? false;
       _updateCompletionPercentage();
     });
   }
@@ -190,7 +186,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.black, backgroundColor: Colors.white60, padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        foregroundColor: Colors.black,
+        backgroundColor: Colors.white60,
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),

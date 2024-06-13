@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // For jsonEncode
 import '../user_details_page.dart'; // Importing the user_details_page.dart to navigate to it
 
 class AlcoholismPage extends StatefulWidget {
+  final String username;
+
+  AlcoholismPage({required this.username});
+
   @override
   _AlcoholismPageState createState() => _AlcoholismPageState();
 }
@@ -85,7 +91,7 @@ class _AlcoholismPageState extends State<AlcoholismPage> {
           ],
           SizedBox(height: screenHeight * 0.04), // Adjust spacing based on screen height
           ElevatedButton(
-            onPressed: _submitForm,
+            onPressed: canSubmit ? _submitForm : null,
             child: Text(
               'Submit',
               style: TextStyle(fontSize: screenWidth * 0.05), // Adjust font size
@@ -102,14 +108,45 @@ class _AlcoholismPageState extends State<AlcoholismPage> {
     );
   }
 
-  void _submitForm() {
-    // Handle form submission
-    print('Submit button pressed');
-    print('Consumed Alcohol Today: $_consumedAlcoholToday');
-    if (_consumedAlcoholToday == 'yes') {
-      print('Glasses Consumed: $_glassesConsumed');
+  bool get canSubmit {
+    if (_consumedAlcoholToday == 'no') {
+      return true;
+    } else if (_consumedAlcoholToday == 'yes' && _glassesConsumed != null && _glassesConsumed!.isNotEmpty) {
+      return true;
     }
+    return false;
+  }
 
-    Navigator.pop(context); // Navigate back to the previous page
+  void _submitForm() async {
+    // API endpoint URL
+    String apiUrl = 'http://192.168.197.83:3000/api/patients/${widget.username}/updateAlcoholItems'; // Replace with your API URL
+    print("Submitting............");
+    // Prepare data to be sent
+    Map<String, dynamic> alcoholData = {
+      'consumedAlcoholToday': _consumedAlcoholToday,
+      'glassesConsumed': _glassesConsumed,
+    };
+
+    try {
+      // Make the HTTP POST request
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(alcoholData),
+      );
+
+      if (response.statusCode == 200) {
+        print('Data submitted successfully');
+        Navigator.pop(context); // Navigate back to the previous page
+      } else {
+        print('Failed to submit data: ${response.statusCode}');
+        // Handle the error appropriately
+      }
+    } catch (error) {
+      print('Error submitting data: $error');
+      // Handle the error appropriately
+    }
   }
 }

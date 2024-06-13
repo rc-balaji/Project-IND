@@ -39,13 +39,13 @@ class MyApp extends StatelessWidget {
     if (screenWidth < 600) {
       // For smaller screens, adjust theme as needed
       return baseTheme.copyWith(
-        // Modify theme properties here for smaller screens
-      );
+          // Modify theme properties here for smaller screens
+          );
     } else {
       // For larger screens, adjust theme as needed
       return baseTheme.copyWith(
-        // Modify theme properties here for larger screens
-      );
+          // Modify theme properties here for larger screens
+          );
     }
   }
 }

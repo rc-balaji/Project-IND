@@ -1,24 +1,36 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences package
 import '../journey/user_details_page.dart';
 import 'sign_up_page.dart';
 
 class PatientLoginScreen extends StatefulWidget {
-
   @override
   _PatientLoginScreenState createState() => _PatientLoginScreenState();
-
 }
 
 class _PatientLoginScreenState extends State<PatientLoginScreen> {
-
   TextEditingController _usernameController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
-
   String _errorMessage = '';
+  bool _showPassword = false; // State variable to toggle password visibility
+  String? _recentUsername; // Variable to store recent username
+  String? _recentPassword; // Variable to store recent password
 
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentCredentials(); // Load recent username and password when the widget initializes
+  }
 
+  void _loadRecentCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _recentUsername = prefs.getString('recent_username');
+      _recentPassword = prefs.getString('recent_password');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +77,14 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                       borderRadius: BorderRadius.circular(mediaQuery.size.height * 0.015625),
                     ),
                   ),
+                  // Show recent username if available
+                  // initialValue: _recentUsername,
+                  // Use controller to set the initial value
+                  // Only set the initial value if it's not null
+                  // If _recentUsername is null, it will not affect the TextField
+                  // If _recentUsername has a value, it will be set as the initial value
+                  // Otherwise, it will remain empty
+                  onChanged: (value) => _recentUsername = value.isEmpty ? null : value,
                 ),
               ),
               SizedBox(height: mediaQuery.size.height * 0.025),
@@ -75,13 +95,29 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _showPassword = !_showPassword;
+                        });
+                      },
+                    ),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.7),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(mediaQuery.size.height * 0.015625),
                     ),
                   ),
-                  obscureText: true,
+                  obscureText: !_showPassword,
+                  // Show recent password if available
+                  // initialValue: _recentPassword,
+                  // Use controller to set the initial value
+                  // Only set the initial value if it's not null
+                  // If _recentPassword is null, it will not affect the TextField
+                  // If _recentPassword has a value, it will be set as the initial value
+                  // Otherwise, it will remain empty
+                  onChanged: (value) => _recentPassword = value.isEmpty ? null : value,
                 ),
               ),
               SizedBox(height: mediaQuery.size.height * 0.025),
@@ -153,6 +189,11 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
     );
 
     if (response.statusCode == 200) {
+      // Store recent username and password if login is successful
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('recent_username', username);
+      await prefs.setString('recent_password', password);
+
       final userData = jsonDecode(response.body);
       Navigator.push(
         context,
