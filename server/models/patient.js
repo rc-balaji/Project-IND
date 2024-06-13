@@ -50,10 +50,6 @@ const recordSchema = new mongoose.Schema({
   }
 });
 
-const medicationReminderSchema = new mongoose.Schema({
-  date: { type: Date, required: true },
-  time: { type: String, required: true }
-});
 
 const medicationListSchema = new mongoose.Schema({
   name: { type: String, required: true },

@@ -29,29 +29,37 @@ var struct = (currentdate)=>{
     }
   };
 }
-exports.addMedicationList = async (req, res) => {
-  console.log("Adding Medication List");
-  try {
-    const { patient_id, medication_list } = req.body;
-    
-    const patient = await Patient.findOne({ username: patient_id });
 
+exports.addMedicationList = async (req, res) => {
+  try {
+    const { username, medication_list } = req.body;
+
+    console.log(username+" "+medication_list[0]);
+    // Find the patient by username
+    console.log("gggggg");
+    const patient = await Patient.findOne({ username: username });
+
+    console.log(patient);
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
-    }
-
-    // Update medication_list field in the patient document
-    patient.medication_list = medication_list;
+      }
+      
+      // Add new medications to the patient's medication list
+      medication_list.forEach(medication => {
+        patient.patient_details.medication_list.push(medication);
+        });
+        
+        console.log(patient);
 
     // Save the updated patient document
     await patient.save();
 
-    res.status(200).json({ message: 'Medication list added successfully' });
+    res.status(200).json({ message: 'Medication list updated successfully' });
   } catch (error) {
-    console.error('Error adding medication list:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
+
 
 
 exports.updatePatientDetails = async (req, res) => {
